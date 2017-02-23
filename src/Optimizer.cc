@@ -75,11 +75,92 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
             continue;
         g2o::VertexSE3Expmap * vSE3 = new g2o::VertexSE3Expmap();
         vSE3->setEstimate(Converter::toSE3Quat(pKF->GetPose()));
-        vSE3->setId(pKF->mnId);
+        vSE3->setId((int)pKF->mnId);
         vSE3->setFixed(pKF->mnId==0);
         optimizer.addVertex(vSE3);
         if(pKF->mnId>maxKFid)
             maxKFid=pKF->mnId;
+    }
+
+    // Set additional pairs of edges between KFs with few covisible MPs (best covisibility less than threshold of approx 15 MPs)
+    // This inhibits distortion that otherwise might disconnect the map if few MPs are tracked but tracking continues
+    // through DeadReckoning();
+
+    unsigned int mnBestCovisibleReinf = 3;
+    unsigned int mnChildsReinf = 3;
+
+    vector<KeyFrame*> vpKFsBestCovisible;
+    vpKFsBestCovisible.reserve(mnBestCovisibleReinf);
+
+    vector<KeyFrame*> vpKFReinf;
+    vpKFReinf.reserve(1+mnChildsReinf+mnBestCovisibleReinf);
+
+    KeyFrame* pKFIter;
+    set<KeyFrame*> spKFChilds;
+
+    Eigen::Matrix<double,6,6> reinfInfo = Eigen::Matrix<double,6,6>::Identity()*0.000001;
+
+    for(size_t i=0; i<vpKFs.size(); i++)
+    {
+        if(vpKFs[i]->isBad())
+            continue;
+        if(vpKFs[i]->isWeakTracking())
+        {
+            // Get valid parent KF
+            pKFIter = vpKFs[i]->GetParent();
+            while(pKFIter->isBad())
+                pKFIter=pKFIter->GetParent();
+
+            if(pKFIter!=NULL)
+                vpKFReinf.push_back(pKFIter);
+
+            // Get fixed number of best covisible
+            vpKFsBestCovisible = vpKFs[i]->GetBestCovisibilityKeyFrames(mnBestCovisibleReinf);
+
+            // Concatenate
+            vpKFReinf.insert(vpKFReinf.end(), vpKFsBestCovisible.begin(), vpKFsBestCovisible.end());
+
+            spKFChilds = vpKFs[i]->GetChilds();
+            unsigned int countChilds = 0;
+            for(set<KeyFrame*>::iterator it = spKFChilds.begin();  it != spKFChilds.end(); ++it)
+            {
+                if(!(*it)->isBad())
+                {
+                    vpKFReinf.push_back(*it);
+                    ++countChilds;
+                    if(countChilds>=mnChildsReinf)
+                        break;
+                }
+            }
+
+            // Add edges between current KF and all reinforcing KFs
+            for(int it=0; i<vpKFReinf.size(); i++)
+            {
+                g2o::EdgeStereoSE3FullPose* vSE3Edge = new g2o::EdgeStereoSE3FullPose();
+                g2o::Vector6d vecEst =
+                        (Converter::toSE3Quat(vpKFs[i]->GetPose())*
+                         Converter::toSE3Quat((vpKFReinf[it]->GetPoseInverse()))).toMinimalVector();
+
+                vSE3Edge->setMeasurement(vecEst);
+                vSE3Edge->setInformation(reinfInfo);
+
+                vSE3Edge->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex((int)vpKFs[i]->mnId)));
+                vSE3Edge->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex((int)vpKFReinf[it]->mnId)));
+                
+                g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+                vSE3Edge->setRobustKernel(rk);
+                rk->setDelta(5.991);
+
+                optimizer.addEdge(vSE3Edge);
+                cout << "included reinforcing edge for KF " << vpKFs[i]->mnId << " connected to KF " << vpKFReinf[it]->mnId << endl;
+                cout << "covisible features: " << vpKFs[i]->GetWeight(vpKFs[vpKFReinf[it]->mnId]) << endl;
+
+            }
+
+            vpKFsBestCovisible.clear();
+            vpKFReinf.clear();
+            spKFChilds.clear();
+        }
     }
 
     const float thHuber2D = sqrt(5.99);
@@ -101,7 +182,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
        const map<KeyFrame*,size_t> observations = pMP->GetObservations();
 
         int nEdges = 0;
-        //SET EDGES
+        //SET EDGES for MPs
         for(map<KeyFrame*,size_t>::const_iterator mit=observations.begin(); mit!=observations.end(); mit++)
         {
 
@@ -121,7 +202,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
                 g2o::EdgeSE3ProjectXYZ* e = new g2o::EdgeSE3ProjectXYZ();
 
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
-                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKF->mnId)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex((int)pKF->mnId)));
                 e->setMeasurement(obs);
                 const float &invSigma2 = pKF->mvInvLevelSigma2[kpUn.octave];
                 e->setInformation(Eigen::Matrix2d::Identity()*invSigma2);
@@ -149,7 +230,7 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
                 g2o::EdgeStereoSE3ProjectXYZ* e = new g2o::EdgeStereoSE3ProjectXYZ();
 
                 e->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(id)));
-                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(pKF->mnId)));
+                e->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex((int)pKF->mnId)));
                 e->setMeasurement(obs);
                 const float &invSigma2 = pKF->mvInvLevelSigma2[kpUn.octave];
                 Eigen::Matrix3d Info = Eigen::Matrix3d::Identity()*invSigma2;
@@ -233,10 +314,9 @@ void Optimizer::BundleAdjustment(const vector<KeyFrame *> &vpKFs, const vector<M
             pMP->mnBAGlobalForKF = nLoopKF;
         }
     }
-
 }
 
-int Optimizer::PoseOptimization(Frame *pFrame)
+int Optimizer::PoseOptimization(Frame *pFrame, cv::Mat *priorRefPose)
 {
     g2o::SparseOptimizer optimizer;
     g2o::BlockSolver_6_3::LinearSolverType * linearSolver;
@@ -257,6 +337,35 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     vSE3->setFixed(false);
     optimizer.addVertex(vSE3);
 
+    // Set prior pose if available
+    if(priorRefPose!=NULL)
+    {
+        // Set reference Keyframe vertex
+        g2o::VertexSE3Expmap * vSE3Ref = new g2o::VertexSE3Expmap();
+        vSE3Ref->setEstimate(Converter::toSE3Quat(*priorRefPose));
+        vSE3Ref->setId(1);
+        vSE3Ref->setFixed(true);
+        optimizer.addVertex(vSE3Ref);
+
+        // Set reference edge
+        g2o::EdgeStereoSE3FullPose* refEdge = new g2o::EdgeStereoSE3FullPose();
+        refEdge->setMeasurement((vSE3->estimate()*vSE3Ref->estimate().inverse()).toMinimalVector());
+
+        Eigen::Matrix<double,6,6> parentInfo = Eigen::Matrix<double,6,6>::Identity()*0.001;
+        refEdge->setInformation(parentInfo);
+
+        refEdge->setVertex(0, optimizer.vertex(0));
+        refEdge->setVertex(1, optimizer.vertex(1));
+
+        //g2o::RobustKernelHuber* rk = new g2o::RobustKernelHuber;
+        //refEdge->setRobustKernel(rk);
+        //rk->setDelta(5.991);
+        optimizer.addEdge(refEdge);
+    } else
+    {
+        cout << "Reference edge not set in pose optimization" << endl;
+    }
+
     // Set MapPoint vertices
     const int N = pFrame->N;
 
@@ -272,7 +381,6 @@ int Optimizer::PoseOptimization(Frame *pFrame)
 
     const float deltaMono = sqrt(5.991);
     const float deltaStereo = sqrt(7.815);
-
 
     {
     unique_lock<mutex> lock(MapPoint::mGlobalMutex);
@@ -444,8 +552,7 @@ int Optimizer::PoseOptimization(Frame *pFrame)
     // Recover optimized pose and return number of inliers
     g2o::VertexSE3Expmap* vSE3_recov = static_cast<g2o::VertexSE3Expmap*>(optimizer.vertex(0));
     g2o::SE3Quat SE3quat_recov = vSE3_recov->estimate();
-    cv::Mat pose = Converter::toCvMat(SE3quat_recov);
-    pFrame->SetPose(pose);
+    pFrame->SetPose(Converter::toCvMat(SE3quat_recov));
 
     return nInitialCorrespondences-nBad;
 }
@@ -1238,6 +1345,73 @@ int Optimizer::OptimizeSim3(KeyFrame *pKF1, KeyFrame *pKF2, vector<MapPoint *> &
     g2oS12= vSim3_recov->estimate();
 
     return nIn;
+}
+
+bool Optimizer::TestPoseOptimization(Frame *pFrame, cv::Mat *priorRefPose)
+{
+    cout << "entered optimziation" << endl;
+    g2o::SparseOptimizer optimizer;
+    g2o::BlockSolver_6_3::LinearSolverType * linearSolver;
+
+    linearSolver = new g2o::LinearSolverDense<g2o::BlockSolver_6_3::PoseMatrixType>();
+
+    g2o::BlockSolver_6_3 * solver_ptr = new g2o::BlockSolver_6_3(linearSolver);
+
+    g2o::OptimizationAlgorithmLevenberg* solver = new g2o::OptimizationAlgorithmLevenberg(solver_ptr);
+    optimizer.setAlgorithm(solver);
+
+    // Set Frame vertex
+    g2o::VertexSE3Expmap * vSE3 = new g2o::VertexSE3Expmap();
+    g2o::Vector6d mBase; mBase << 1,0,3,0,0.0,0;
+    g2o::SE3Quat mBaseQuat; mBaseQuat.fromMinimalVector(mBase);
+    vSE3->setEstimate(mBaseQuat);
+    vSE3->setId(0);
+    vSE3->setFixed(false);
+    optimizer.addVertex(vSE3);
+
+    g2o::VertexSE3Expmap * vSE3RefKF = new g2o::VertexSE3Expmap();
+    g2o::Vector6d mRef; mRef << -3,0,-1,0,0.5,0.2;
+    g2o::SE3Quat mRefQuat; mRefQuat.fromMinimalVector(mRef);
+    vSE3RefKF->setEstimate(mRefQuat.inverse());
+    vSE3RefKF->setId(1);
+    vSE3RefKF->setFixed(true);
+    optimizer.addVertex(vSE3RefKF);
+
+    // Set reference edge
+    g2o::EdgeStereoSE3FullPose* parentEdge = new g2o::EdgeStereoSE3FullPose();
+
+    cout << "Base vertex estimate is " << endl << vSE3->estimate().to_homogeneous_matrix() << endl;
+    cout << "Reference vertex estimate is" << endl << vSE3RefKF->estimate().to_homogeneous_matrix() << endl;
+    cout << "With translation " << endl << -vSE3RefKF->estimate().inverse().translation() << endl;
+    cout << "Error is " << endl << (vSE3->estimate()*vSE3RefKF->estimate().inverse()).to_homogeneous_matrix() << endl;
+    cout << "With translation " << endl << (vSE3->estimate()*vSE3RefKF->estimate().inverse()).translation() << endl;
+
+    g2o::Vector6d mMeas; mMeas << -1,0,3,0.1,0.0,0.6;
+    parentEdge->setMeasurement(mMeas);
+
+    cout << "Measurement set at " << endl << mMeas << endl;
+
+    Eigen::Matrix<double,6,6> parentInfo = Eigen::Matrix<double,6,6>::Identity();
+    parentEdge->setInformation(parentInfo);
+    parentEdge->setVertex(0, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(0)));
+    parentEdge->setVertex(1, dynamic_cast<g2o::OptimizableGraph::Vertex*>(optimizer.vertex(1)));
+
+    optimizer.addEdge(parentEdge);
+
+    optimizer.initializeOptimization(0);
+    optimizer.optimize(10);
+
+    // Recover optimized pose and return number of inliers
+    g2o::VertexSE3Expmap* vSE3_recov = static_cast<g2o::VertexSE3Expmap*>(optimizer.vertex(0));
+    g2o::SE3Quat SE3quat_recov = vSE3_recov->estimate();
+    cv::Mat pose = Converter::toCvMat(SE3quat_recov);
+    cout << "optimized pose found at " << endl << SE3quat_recov.to_homogeneous_matrix() << endl;
+    cout << "with global translation " << endl << -SE3quat_recov.inverse().translation() << endl;
+    g2o::SE3Quat measQuat;
+    measQuat.fromMinimalVector(mMeas);
+    cout << "Recovered reference vertex at " << endl << (SE3quat_recov.inverse()*measQuat).translation() << endl;
+
+    return true;
 }
 
 

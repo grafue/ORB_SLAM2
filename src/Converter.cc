@@ -70,6 +70,16 @@ cv::Mat Converter::toCvMat(const Eigen::Matrix<double,4,4> &m)
     return cvMat.clone();
 }
 
+cv::Mat Converter::toCvMat(const Eigen::Transform<double,3,0> &m)
+{
+  cv::Mat cvMat(4,4,CV_32F);
+  for(int i=0;i<4;i++)
+    for(int j=0; j<4; j++)
+      cvMat.at<float>(i,j)=m(i,j);
+
+  return cvMat.clone();
+}
+
 cv::Mat Converter::toCvMat(const Eigen::Matrix3d &m)
 {
     cv::Mat cvMat(3,3,CV_32F);
@@ -107,12 +117,67 @@ cv::Mat Converter::toCvSE3(const Eigen::Matrix<double,3,3> &R, const Eigen::Matr
     return cvMat.clone();
 }
 
+Eigen::Transform<double,3,0> Converter::toEigenTf(const nav_msgs::OdometryConstPtr& msgOdometry,
+                                                const geometry_msgs::PoseWithCovarianceStampedConstPtr& msgPose)
+{
+  Eigen::Vector3d tw_imu(
+          msgOdometry->pose.pose.position.x,
+          msgOdometry->pose.pose.position.y,
+          msgOdometry->pose.pose.position.z
+  );
+
+  Eigen::Quaterniond Qw_imu(
+          msgOdometry->pose.pose.orientation.w,
+          msgOdometry->pose.pose.orientation.x,
+          msgOdometry->pose.pose.orientation.y,
+          msgOdometry->pose.pose.orientation.z
+  );
+
+  Eigen::Vector3d timu_c(
+          msgPose->pose.pose.position.x,
+          msgPose->pose.pose.position.y,
+          msgPose->pose.pose.position.z
+  );
+
+  Eigen::Quaterniond Qimu_c(
+          msgPose->pose.pose.orientation.w,
+          msgPose->pose.pose.orientation.x,
+          msgPose->pose.pose.orientation.y,
+          msgPose->pose.pose.orientation.z
+  );
+
+    Eigen::Transform<double,3,0> Twc(Qw_imu.toRotationMatrix()*Qimu_c.toRotationMatrix());
+  Twc.pretranslate(tw_imu + Qw_imu.toRotationMatrix()*timu_c);
+  return Twc;
+}
+
+Eigen::Transform<double,3,0> Converter::toEigenTf(const cv::Mat &cvMat3)
+{
+  Eigen::Matrix3d R;
+  Eigen::Matrix<double,3,1> t;
+
+  t = Converter::toVector3d(cvMat3.rowRange(0, 2).col(3));
+  R = Converter::toMatrix3d(cvMat3.rowRange(0,2).colRange(0,2));
+
+  Eigen::Transform<double,3,0> H(R);
+  H.pretranslate(t);
+
+  return H;
+}
+
 Eigen::Matrix<double,3,1> Converter::toVector3d(const cv::Mat &cvVector)
 {
     Eigen::Matrix<double,3,1> v;
     v << cvVector.at<float>(0), cvVector.at<float>(1), cvVector.at<float>(2);
 
     return v;
+}
+
+Eigen::Matrix<double,4,1> Converter::toVector4d(const cv::Mat &cvVector)
+{
+    Eigen::Matrix<double,4,1> v;
+    v << cvVector.at<float>(0), cvVector.at<float>(1), cvVector.at<float>(2), cvVector.at<float>(3);
+     return v;
 }
 
 Eigen::Matrix<double,3,1> Converter::toVector3d(const cv::Point3f &cvPoint)
@@ -146,6 +211,16 @@ std::vector<float> Converter::toQuaternion(const cv::Mat &M)
     v[3] = q.w();
 
     return v;
+}
+
+cv::Mat Converter::toHomogeneousTransform(const cv::Mat &position, const cv::Mat &orientation)
+{
+  g2o::SE3Quat Quat;
+    Quat.setTranslation(toVector3d(position));
+    Quat.setRotation(Eigen::Quaternion<double>(toVector4d(orientation)));
+
+    Eigen::Matrix<double,4,4> eigMat = Quat.to_homogeneous_matrix();
+    return toCvMat(eigMat);
 }
 
 } //namespace ORB_SLAM

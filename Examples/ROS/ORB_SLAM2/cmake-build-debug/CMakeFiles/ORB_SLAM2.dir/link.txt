@@ -1,0 +1,1 @@
+/usr/bin/c++   -g   CMakeFiles/ORB_SLAM2.dir/src/ros_mono.cc.o CMakeFiles/ORB_SLAM2.dir/src/ros_rgbd.cc.o CMakeFiles/ORB_SLAM2.dir/src/ros_stereo.cc.o  -o ORB_SLAM2 

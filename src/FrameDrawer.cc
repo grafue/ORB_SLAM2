@@ -59,7 +59,7 @@ cv::Mat FrameDrawer::DrawFrame()
             vIniKeys = mvIniKeys;
             vMatches = mvIniMatches;
         }
-        else if(mState==Tracking::OK)
+        else if(mState==Tracking::OK || mState==Tracking::DEAD_RECKONING)
         {
             vCurrentKeys = mvCurrentKeys;
             vbVO = mvbVO;
@@ -86,13 +86,12 @@ cv::Mat FrameDrawer::DrawFrame()
             }
         }        
     }
-    else if(state==Tracking::OK) //TRACKING
+    else if(mState==Tracking::OK || mState==Tracking::DEAD_RECKONING) //TRACKING
     {
         mnTracked=0;
         mnTrackedVO=0;
         const float r = 5;
-        const int n = vCurrentKeys.size();
-        for(int i=0;i<n;i++)
+        for(int i=0;i<N;i++)
         {
             if(vbVO[i] || vbMap[i])
             {
@@ -145,6 +144,10 @@ void FrameDrawer::DrawTextInfo(cv::Mat &im, int nState, cv::Mat &imText)
         if(mnTrackedVO>0)
             s << ", + VO matches: " << mnTrackedVO;
     }
+    else if(nState==Tracking::DEAD_RECKONING)
+    {
+        s << " TRACKING LOST, PERFORMING DEAD RECKONING ";
+    }
     else if(nState==Tracking::LOST)
     {
         s << " TRACK LOST. TRYING TO RELOCALIZE ";
@@ -180,7 +183,7 @@ void FrameDrawer::Update(Tracking *pTracker)
         mvIniKeys=pTracker->mInitialFrame.mvKeys;
         mvIniMatches=pTracker->mvIniMatches;
     }
-    else if(pTracker->mLastProcessedState==Tracking::OK)
+    else if(pTracker->mLastProcessedState==Tracking::OK || pTracker->mLastProcessedState==Tracking::DEAD_RECKONING)
     {
         for(int i=0;i<N;i++)
         {

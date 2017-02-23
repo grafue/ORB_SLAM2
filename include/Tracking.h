@@ -66,6 +66,9 @@ public:
     void SetLoopClosing(LoopClosing* pLoopClosing);
     void SetViewer(Viewer* pViewer);
 
+    cv::Mat GetVelocity();
+    double GetLastTimeStamp();
+
     // Load new settings
     // The focal lenght should be similar or scale prediction will fail when projecting points
     // TODO: Modify MapPoint::PredictScale to take into account focal lenght
@@ -83,7 +86,8 @@ public:
         NO_IMAGES_YET=0,
         NOT_INITIALIZED=1,
         OK=2,
-        LOST=3
+        LOST=3,
+        DEAD_RECKONING=4
     };
 
     eTrackingState mState;
@@ -102,6 +106,30 @@ public:
     std::vector<cv::Point2f> mvbPrevMatched;
     std::vector<cv::Point3f> mvIniP3D;
     Frame mInitialFrame;
+
+    // True if external pose measurement should be use for intial frame position and orientation
+    int mbExtInit;
+
+    // True if external odometry should be used for pose prediction
+    int mbExtOdo;
+
+    // True if tracking should be reset completely if it is lost soon after initialization
+    int mbResetIfLost;
+
+    // True if tracking should advance using motion model estimate even when tracking is lost
+    int mbDeadReckoning;
+
+    // True if an initial guess of the pose should be included as fixed node in the pose optimization
+    int mbUsePosePrior;
+
+    // Weak tracking threshold. If the best covisible keyframe has less than this number of covisible features
+    // the relative position will be reinforced with additional edges in the bundle adjustment.
+    int mReinforceWeakTrackingThreshold;
+
+    // Buffers for initialization and motion estimation via external odometry
+    cv::Mat mInitialPosition;
+    cv::Mat mExternalPoseMeas;
+    cv::Mat mLastExternalPoseMeas;
 
     // Lists used to recover the full camera trajectory at the end of the execution.
     // Basically we store the reference keyframe for each frame and its relative transformation
@@ -134,6 +162,8 @@ protected:
 
     bool Relocalization();
 
+    bool DeadReckoning();
+
     void UpdateLocalMap();
     void UpdateLocalPoints();
     void UpdateLocalKeyFrames();
@@ -143,6 +173,9 @@ protected:
 
     bool NeedNewKeyFrame();
     void CreateNewKeyFrame();
+
+    void UpdateMotionModel();
+
 
     // In case of performing only localization, this flag is true when there are no matches to
     // points in the map. Still tracking will continue if there are enough matches with temporal points.
@@ -208,6 +241,7 @@ protected:
     unsigned int mnLastRelocFrameId;
 
     //Motion Model
+    //Usage mPose_3_w = mVel_3_2*mPose_2_w = mVel_2_1*mPose_2_w=(mPose_2_w*mPose_w_1)*mPose_2_w
     cv::Mat mVelocity;
 
     //Color order (true RGB, false BGR, ignored if grayscale)

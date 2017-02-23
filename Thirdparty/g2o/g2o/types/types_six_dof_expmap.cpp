@@ -363,5 +363,29 @@ void EdgeStereoSE3ProjectXYZOnlyPose::linearizeOplus() {
   _jacobianOplusXi(2,5) = _jacobianOplusXi(0,5)-bf*invz_2;
 }
 
+bool EdgeStereoSE3FullPose::read(std::istream& is) {
+    for (int i=0; i<=5; i++){
+    is >> _measurement[i];
+  }
+  for (int i=0; i<=5; i++)
+    for (int j=i; j<=5; j++){
+      is >> information()(i,j);
+      if (i!=j)
+        information()(j,i)=information()(i,j);
+    }
+  return true;
+}
+
+bool EdgeStereoSE3FullPose::write(std::ostream& os) const {
+  for (int i=0; i<=5; i++){
+    os << measurement()[i] << " ";
+  }
+  for (int i=0; i<=5; i++)
+    for (int j=i; i<=5; j++){
+      os << " " << information()(i,j);
+    }
+  return os.good();
+
+}
 
 } // end namespace

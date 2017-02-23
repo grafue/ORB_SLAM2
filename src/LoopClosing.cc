@@ -566,8 +566,6 @@ void LoopClosing::CorrectLoop()
     // Optimize graph
     Optimizer::OptimizeEssentialGraph(mpMap, mpMatchedKF, mpCurrentKF, NonCorrectedSim3, CorrectedSim3, LoopConnections, mbFixScale);
 
-    mpMap->InformNewBigChange();
-
     // Add loop edge
     mpMatchedKF->AddLoopEdge(mpCurrentKF);
     mpCurrentKF->AddLoopEdge(mpMatchedKF);
@@ -580,6 +578,8 @@ void LoopClosing::CorrectLoop()
 
     // Loop closed. Release Local Mapping.
     mpLocalMapper->Release();    
+
+    cout << "Loop Closed!" << endl;
 
     mLastLoopKFid = mpCurrentKF->mnId;   
 }
@@ -734,9 +734,7 @@ void LoopClosing::RunGlobalBundleAdjustment(unsigned long nLoopKF)
 
                     pMP->SetWorldPos(Rwc*Xc+twc);
                 }
-            }            
-
-            mpMap->InformNewBigChange();
+            }
 
             mpLocalMapper->Release();
 

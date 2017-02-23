@@ -80,8 +80,6 @@ public:
 
     bool isFinished();
 
-    EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
 protected:
 
     bool CheckNewKeyFrames();

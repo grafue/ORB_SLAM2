@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6"/>
+	<Project>
+		<Option title="ORB_SLAM2"/>
+		<Option makefile_is_custom="1"/>
+		<Option compiler="gcc"/>
+		<Option virtualFolders="CMake Files\;"/>
+		<Build>
+			<Target title="all">
+				<Option working_dir="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="edit_cache">
+				<Option working_dir="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="rebuild_cache">
+				<Option working_dir="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug"/>
+				<Option type="4"/>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="ORB_SLAM2">
+				<Option output="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/ORB_SLAM2" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/grafue/catkin_ws/devel/include"/>
+					<Add directory="/opt/ros/indigo/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/usr/include/c++/4.8"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/4.8"/>
+					<Add directory="/usr/include/c++/4.8/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 ORB_SLAM2"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="ORB_SLAM2/fast">
+				<Option output="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/ORB_SLAM2" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug"/>
+				<Option object_output="./"/>
+				<Option type="1"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add directory="/home/grafue/catkin_ws/devel/include"/>
+					<Add directory="/opt/ros/indigo/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include"/>
+					<Add directory="/usr/local/include"/>
+					<Add directory="/usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed"/>
+					<Add directory="/usr/include/x86_64-linux-gnu"/>
+					<Add directory="/usr/include"/>
+					<Add directory="/usr/include/c++/4.8"/>
+					<Add directory="/usr/include/x86_64-linux-gnu/c++/4.8"/>
+					<Add directory="/usr/include/c++/4.8/backward"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 ORB_SLAM2/fast"/>
+					<CompileFile command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="/usr/bin/make -j4 -f &quot;/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+		</Build>
+		<Unit filename="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src/ros_mono.cc">
+			<Option target="ORB_SLAM2"/>
+		</Unit>
+		<Unit filename="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src/ros_rgbd.cc">
+			<Option target="ORB_SLAM2"/>
+		</Unit>
+		<Unit filename="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/src/ros_stereo.cc">
+			<Option target="ORB_SLAM2"/>
+		</Unit>
+		<Unit filename="/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/CMakeLists.txt">
+			<Option virtualFolder="CMake Files\"/>
+		</Unit>
+	</Project>
+</CodeBlocks_project_file>

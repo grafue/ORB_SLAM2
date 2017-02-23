@@ -141,6 +141,10 @@ void MapDrawer::DrawKeyFrames(const bool bDrawKF, const bool bDrawGraph)
             cv::Mat Ow = vpKFs[i]->GetCameraCenter();
             if(!vCovKFs.empty())
             {
+                if(vpKFs[i]->isWeakTracking())
+                    glColor4f(1.0f,0.0f,0.0f,0.6f);
+                else
+                    glColor4f(0.0f,1.0f,0.0f,0.6f);
                 for(vector<KeyFrame*>::const_iterator vit=vCovKFs.begin(), vend=vCovKFs.end(); vit!=vend; vit++)
                 {
                     if((*vit)->mnId<vpKFs[i]->mnId)

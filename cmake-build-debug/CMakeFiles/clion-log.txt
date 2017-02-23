@@ -1,0 +1,19 @@
+/home/grafue/clion-2016.2.3/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/grafue/catkin_ws/src/ORB_SLAM2
+Build type: Debug
+-- Using flag -std=c++11.
+-- :/opt/ros/indigo
+-- Using CATKIN_DEVEL_PREFIX: /home/grafue/catkin_ws/src/ORB_SLAM2/cmake-build-debug/devel
+-- Using CMAKE_PREFIX_PATH: :/opt/ros/indigo
+-- Using PYTHON_EXECUTABLE: /usr/bin/python
+-- Using Debian Python package layout
+-- Using empy: /usr/bin/empy
+-- Using CATKIN_ENABLE_TESTING: ON
+-- Call enable_testing()
+-- Using CATKIN_TEST_RESULTS_DIR: /home/grafue/catkin_ws/src/ORB_SLAM2/cmake-build-debug/test_results
+-- Found gtest sources under '/usr/src/gtest': gtests will be built
+-- Using Python nosetests: /usr/bin/nosetests-2.7
+-- catkin 0.6.18
+-- Using these message generators: 
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/grafue/catkin_ws/src/ORB_SLAM2/cmake-build-debug
