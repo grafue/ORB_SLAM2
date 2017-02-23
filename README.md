@@ -238,3 +238,5 @@ This mode can be used when you have a good map of your working area. In this mod
 1. Clone Repository
 2. Replace src folder link in Examples/ROS/orb_slam using 
 $ ln -s target link-name
+
+Run stereo mode: rosrun orb_slam2 stereo $(find orb_slam2)/../../../Vocabulary/ORBvoc.txt $(find orb_slam2)/../../Stereo/test.yaml true
