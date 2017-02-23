@@ -236,6 +236,5 @@ This mode can be used when you have a good map of your working area. In this mod
 
 #10. Running RSLAM
 1. Clone Repository
-2. Remove build - folders in Thirdparty/DBoW2 and Thirdparty/g20
-3. Replace src folder link in Examples/ROS/orb_slam using 
+2. Replace src folder link in Examples/ROS/orb_slam using 
 $ ln -s target link-name
