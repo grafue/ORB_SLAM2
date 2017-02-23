@@ -48,8 +48,7 @@ public:
     
     enum {HARRIS_SCORE=0, FAST_SCORE=1 };
 
-    ORBextractor(int nfeatures, float scaleFactor, int nlevels,
-                 int iniThFAST, int minThFAST);
+    ORBextractor(int nFeatures, bool adaptiveNFeatures, float scaleFactor, int nlevels, int iniThFAST, int minThFAST);
 
     ~ORBextractor(){}
 
@@ -82,6 +81,15 @@ public:
         return mvInvLevelSigma2;
     }
 
+    void SetNFeatures(int nfeatures);
+    void ResetNFeatures();
+    int & GetNfeatures() const;
+
+    int & GetNLastFeatures() const;
+
+
+    void ComputeNFeaturesPerLevel();
+
     std::vector<cv::Mat> mvImagePyramid;
 
 protected:
@@ -91,14 +99,19 @@ protected:
     std::vector<cv::KeyPoint> DistributeOctTree(const std::vector<cv::KeyPoint>& vToDistributeKeys, const int &minX,
                                            const int &maxX, const int &minY, const int &maxY, const int &nFeatures, const int &level);
 
+
     void ComputeKeyPointsOld(std::vector<std::vector<cv::KeyPoint> >& allKeypoints);
     std::vector<cv::Point> pattern;
 
     int nfeatures;
+    bool adaptiveNFeatures;
     double scaleFactor;
     int nlevels;
     int iniThFAST;
     int minThFAST;
+
+    int nIniFeatures;
+    int nLastFeatures;
 
     std::vector<int> mnFeaturesPerLevel;
 

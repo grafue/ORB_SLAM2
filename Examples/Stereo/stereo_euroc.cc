@@ -27,6 +27,9 @@
 
 #include<opencv2/core/core.hpp>
 
+#include<message_filters/subscriber.h>
+#include<message_filters/time_synchronizer.h>
+
 #include<System.h>
 
 using namespace std;

@@ -201,6 +201,25 @@ public:
   double fx, fy, cx, cy, bf;
 };
 
+class EdgeStereoSE3FullPose: public BaseBinaryEdge<6, Vector6d, VertexSE3Expmap, VertexSE3Expmap>{
+public:
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+
+  EdgeStereoSE3FullPose(){}
+
+  bool read(std::istream& is);
+
+  bool write(std::ostream& os) const;
+
+  void computeError() {
+    const VertexSE3Expmap* v1 = static_cast<const VertexSE3Expmap*>(_vertices[0]);
+    const VertexSE3Expmap* v2 = static_cast<const VertexSE3Expmap*>(_vertices[1]);
+    Vector6d obs(_measurement);
+    _error = obs - (v1->estimate()*v2->estimate().inverse()).toMinimalVector();
+  }
+
+};
+
 
 
 } // end namespace

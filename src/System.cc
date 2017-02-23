@@ -26,11 +26,15 @@
 #include <pangolin/pangolin.h>
 #include <iomanip>
 
+#include<tf/transform_broadcaster.h>
+
+
+
 namespace ORB_SLAM2
 {
 
 System::System(const string &strVocFile, const string &strSettingsFile, const eSensor sensor,
-               const bool bUseViewer):mSensor(sensor), mpViewer(static_cast<Viewer*>(NULL)), mbReset(false),mbActivateLocalizationMode(false),
+               const bool bUseViewer):mSensor(sensor),mbReset(false),mbActivateLocalizationMode(false),
         mbDeactivateLocalizationMode(false)
 {
     // Output welcome message
@@ -95,12 +99,12 @@ System::System(const string &strVocFile, const string &strSettingsFile, const eS
     mptLoopClosing = new thread(&ORB_SLAM2::LoopClosing::Run, mpLoopCloser);
 
     //Initialize the Viewer thread and launch
+    mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
     if(bUseViewer)
-    {
-        mpViewer = new Viewer(this, mpFrameDrawer,mpMapDrawer,mpTracker,strSettingsFile);
         mptViewer = new thread(&Viewer::Run, mpViewer);
-        mpTracker->SetViewer(mpViewer);
-    }
+
+    mpTracker->SetViewer(mpViewer);
+
 
     //Set pointers between threads
     mpTracker->SetLocalMapper(mpLocalMapper);
@@ -154,14 +158,7 @@ cv::Mat System::TrackStereo(const cv::Mat &imLeft, const cv::Mat &imRight, const
         mbReset = false;
     }
     }
-
-    cv::Mat Tcw = mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
-
-    unique_lock<mutex> lock2(mMutexState);
-    mTrackingState = mpTracker->mState;
-    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
-    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
-    return Tcw;
+    return mpTracker->GrabImageStereo(imLeft,imRight,timestamp);
 }
 
 cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const double &timestamp)
@@ -206,13 +203,7 @@ cv::Mat System::TrackRGBD(const cv::Mat &im, const cv::Mat &depthmap, const doub
     }
     }
 
-    cv::Mat Tcw = mpTracker->GrabImageRGBD(im,depthmap,timestamp);
-
-    unique_lock<mutex> lock2(mMutexState);
-    mTrackingState = mpTracker->mState;
-    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
-    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
-    return Tcw;
+    return mpTracker->GrabImageRGBD(im,depthmap,timestamp);
 }
 
 cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
@@ -257,15 +248,146 @@ cv::Mat System::TrackMonocular(const cv::Mat &im, const double &timestamp)
     }
     }
 
-    cv::Mat Tcw = mpTracker->GrabImageMonocular(im,timestamp);
-
-    unique_lock<mutex> lock2(mMutexState);
-    mTrackingState = mpTracker->mState;
-    mTrackedMapPoints = mpTracker->mCurrentFrame.mvpMapPoints;
-    mTrackedKeyPointsUn = mpTracker->mCurrentFrame.mvKeysUn;
-
-    return Tcw;
+    return mpTracker->GrabImageMonocular(im,timestamp);
 }
+
+void System::SetPublisherHandle(const ros::Publisher pubHandle)
+{
+    publisherHandle = pubHandle;
+}
+
+void System::PublishOdometry()
+{
+	if(!((mpTracker->mCurrentFrame).mTcw.empty()) & !(mpTracker->GetVelocity().empty()))
+	{
+        double dt = mpTracker->mCurrentFrame.mTimeStamp - mpTracker->GetLastTimeStamp();
+
+        nav_msgs::Odometry odometryMsg;
+
+		cv::Mat Tcw = (mpTracker->mCurrentFrame).mTcw.clone();
+		cv::MatExpr Rwc = Tcw.rowRange(0,3).colRange(0,3).t();
+		cv::Mat twc = -(Rwc*Tcw.rowRange(0,3).col(3));
+	    vector<float> q = Converter::toQuaternion(Rwc);
+
+        //cv::Mat twistAngularSkew = Tcw.rowRange(0,2).colRange(0,2)*mpTracker->GetVelocity().rowRange(0,2).colRange(0,2).t();
+        cv::Mat twistAngularSkew = cv::Mat::eye(4,4,CV_32F) - mpTracker->GetVelocity();
+        cv::Mat twistLinear = -1.0d*mpTracker->GetVelocity().rowRange(0,3).col(3).clone();
+
+		odometryMsg.header.seq = 1;
+		odometryMsg.header.stamp = ros::Time(mpTracker->mCurrentFrame.mTimeStamp);
+        odometryMsg.header.frame_id = "world";
+        odometryMsg.child_frame_id = "ORB_odometry";
+		odometryMsg.pose.pose.position.x = twc.at<float>(0);
+		odometryMsg.pose.pose.position.y = twc.at<float>(1);
+		odometryMsg.pose.pose.position.z = twc.at<float>(2);
+
+		odometryMsg.pose.pose.orientation.x = q[0];
+		odometryMsg.pose.pose.orientation.y = q[1];
+		odometryMsg.pose.pose.orientation.z = q[2];
+		odometryMsg.pose.pose.orientation.w = q[3];
+
+		for(unsigned int i=0;i<6;i++){
+		  for(unsigned int j=0;j<6;j++){
+			odometryMsg.pose.covariance[j+6*i] = -1;
+		  }
+		}
+
+		odometryMsg.twist.twist.linear.x = twistLinear.at<float>(0)/dt;
+		odometryMsg.twist.twist.linear.y = twistLinear.at<float>(1)/dt;
+		odometryMsg.twist.twist.linear.z = twistLinear.at<float>(2)/dt;
+		odometryMsg.twist.twist.angular.x = (twistAngularSkew.at<float>(2,1)-twistAngularSkew.at<float>(1,2))/(2*dt);
+		odometryMsg.twist.twist.angular.y = (twistAngularSkew.at<float>(0,2)-twistAngularSkew.at<float>(2,0))/(2*dt);
+		odometryMsg.twist.twist.angular.z = (twistAngularSkew.at<float>(1,0)-twistAngularSkew.at<float>(0,1))/(2*dt);
+
+		for(unsigned int i=0;i<6;i++){
+		  for(unsigned int j=0;j<6;j++){
+			odometryMsg.twist.covariance[j+6*i] = -1;
+		  }
+		}
+		publisherHandle.publish(odometryMsg);
+	}
+}
+
+void System::PublishPoseTransform(ros::Time t, const cv::Mat &T21, std::string frame1, std::string frame2)
+{
+    if(T21.empty())
+    {
+        cout << "Non-valid transform for transformation, tf message aborted" << endl;
+        return;
+    }
+
+    tf::StampedTransform tfMsg;
+
+    tfMsg.stamp_ = t;
+    tfMsg.frame_id_ = frame1;
+    tfMsg.child_frame_id_ = frame2;
+
+    // R12 = T21(0:2,0:2).transposed()
+    cv::Mat R12 = (T21.rowRange(0, 3).colRange(0, 3).t());
+    // t12 = (-1)*R12*T21(0:2,3)
+    cv::Mat t12 = R12*T21.rowRange(0, 3).col(3)*(-1);
+
+    vector<float> q12 = Converter::toQuaternion(R12);
+
+    tfMsg.setOrigin(tf::Vector3(t12.at<float>(0), t12.at<float>(1), t12.at<float>(2)));
+    tfMsg.setRotation(tf::Quaternion(q12[0], q12[1], q12[2], q12[3]));
+
+    tfBroadcaster.sendTransform(tfMsg);
+}
+
+void System::PublishInertialTransform(ros::Time t, std::string mapFrame, std::string worldFrame, std::string initialFrame)
+{
+    // Transform all keyframes so that the first keyframe is at the origin.
+    // After a loop closure the first keyframe might not be at the origin.
+
+    //vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
+    //sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
+    //cv::Mat Tow = vpKFs[0]->GetPose();
+
+    cv::Mat Tow = mpMap->GetFirstKeyframe()->GetPose();
+    PublishPoseTransform(t, Tow, worldFrame, mapFrame);
+    PublishPoseTransform(t, mpTracker->mInitialPosition, worldFrame, initialFrame);
+}
+
+// Check whether the tracker initial pose was initialized
+bool System::CheckTrackerInitialization()
+{
+    return mpTracker->mInitialPosition.at<float>(3,3) > 0;
+}
+
+// Set the initial position using external pose measurements, initial frame at camera frame of external system
+void System::SetTrackerInitialPose(const nav_msgs::OdometryConstPtr& msgOdometry,
+                                   const geometry_msgs::PoseWithCovarianceStampedConstPtr& msgPose)
+{
+  cv::Mat Tcw = Converter::toCvMat(Converter::toEigenTf(msgOdometry, msgPose).inverse(Eigen::TransformTraits::Isometry));
+
+  if(mpTracker->mbExtInit)
+      mpTracker->mInitialPosition = Tcw;
+  else
+      mpTracker->mInitialPosition = cv::Mat::eye(4, 4, CV_32F);
+
+      //Eigen::Transform<double,3,0> Twc = Converter::toEigenTf(msgOdometry, msgPose);
+      //Eigen::Transform Tcw = Twc.inverse();
+
+  if(mpTracker->mbExtOdo)
+  {
+      mpTracker->mExternalPoseMeas = Tcw;
+      mpTracker->mLastExternalPoseMeas = mpTracker->mExternalPoseMeas;
+  }
+}
+
+// Feed motion model using external odometry
+void System::SetMotionModel(const nav_msgs::OdometryConstPtr& msgOdometry,
+                            const geometry_msgs::PoseWithCovarianceStampedConstPtr& msgPose)
+{
+    if(mpTracker->mbExtOdo)
+    {
+        Eigen::Transform<double,3,0> Twc = Converter::toEigenTf(msgOdometry, msgPose);
+        mpTracker->mLastExternalPoseMeas = mpTracker->mExternalPoseMeas;
+        mpTracker->mExternalPoseMeas = Converter::toCvMat(Twc.inverse(Eigen::TransformTraits::Isometry));
+    }
+}
+
 
 void System::ActivateLocalizationMode()
 {
@@ -279,19 +401,6 @@ void System::DeactivateLocalizationMode()
     mbDeactivateLocalizationMode = true;
 }
 
-bool System::MapChanged()
-{
-    static int n=0;
-    int curn = mpMap->GetLastBigChangeIdx();
-    if(n<curn)
-    {
-        n=curn;
-        return true;
-    }
-    else
-        return false;
-}
-
 void System::Reset()
 {
     unique_lock<mutex> lock(mMutexReset);
@@ -302,31 +411,21 @@ void System::Shutdown()
 {
     mpLocalMapper->RequestFinish();
     mpLoopCloser->RequestFinish();
-    if(mpViewer)
-    {
-        mpViewer->RequestFinish();
-        while(!mpViewer->isFinished())
-            usleep(5000);
-    }
+    mpViewer->RequestFinish();
 
     // Wait until all thread have effectively stopped
-    while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished() || mpLoopCloser->isRunningGBA())
+    while(!mpLocalMapper->isFinished() || !mpLoopCloser->isFinished()  ||
+          !mpViewer->isFinished()      || mpLoopCloser->isRunningGBA())
     {
         usleep(5000);
     }
 
-    if(mpViewer)
-        pangolin::BindToContext("ORB-SLAM2: Map Viewer");
+    pangolin::BindToContext("ORB-SLAM2: Map Viewer");
 }
 
 void System::SaveTrajectoryTUM(const string &filename)
 {
     cout << endl << "Saving camera trajectory to " << filename << " ..." << endl;
-    if(mSensor==MONOCULAR)
-    {
-        cerr << "ERROR: SaveTrajectoryTUM cannot be used for monocular." << endl;
-        return;
-    }
 
     vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
     sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
@@ -334,6 +433,8 @@ void System::SaveTrajectoryTUM(const string &filename)
     // Transform all keyframes so that the first keyframe is at the origin.
     // After a loop closure the first keyframe might not be at the origin.
     cv::Mat Two = vpKFs[0]->GetPoseInverse();
+
+    cout << "origin was found at " << Two << endl;
 
     ofstream f;
     f.open(filename.c_str());
@@ -419,11 +520,6 @@ void System::SaveKeyFrameTrajectoryTUM(const string &filename)
 void System::SaveTrajectoryKITTI(const string &filename)
 {
     cout << endl << "Saving camera trajectory to " << filename << " ..." << endl;
-    if(mSensor==MONOCULAR)
-    {
-        cerr << "ERROR: SaveTrajectoryKITTI cannot be used for monocular." << endl;
-        return;
-    }
 
     vector<KeyFrame*> vpKFs = mpMap->GetAllKeyFrames();
     sort(vpKFs.begin(),vpKFs.end(),KeyFrame::lId);
@@ -469,24 +565,6 @@ void System::SaveTrajectoryKITTI(const string &filename)
     }
     f.close();
     cout << endl << "trajectory saved!" << endl;
-}
-
-int System::GetTrackingState()
-{
-    unique_lock<mutex> lock(mMutexState);
-    return mTrackingState;
-}
-
-vector<MapPoint*> System::GetTrackedMapPoints()
-{
-    unique_lock<mutex> lock(mMutexState);
-    return mTrackedMapPoints;
-}
-
-vector<cv::KeyPoint> System::GetTrackedKeyPointsUn()
-{
-    unique_lock<mutex> lock(mMutexState);
-    return mTrackedKeyPointsUn;
 }
 
 } //namespace ORB_SLAM

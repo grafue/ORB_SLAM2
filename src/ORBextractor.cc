@@ -407,11 +407,14 @@ static int bit_pattern_31_[256*4] =
     -1,-6, 0,-11/*mean (0.127148), correlation (0.547401)*/
 };
 
-ORBextractor::ORBextractor(int _nfeatures, float _scaleFactor, int _nlevels,
-         int _iniThFAST, int _minThFAST):
-    nfeatures(_nfeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
+ORBextractor::ORBextractor(int _nfeatures, bool _adaptiveNFeatures, float _scaleFactor, int _nlevels, int _iniThFAST,
+                           int _minThFAST) :
+    nfeatures(_nfeatures), adaptiveNFeatures(_adaptiveNFeatures), scaleFactor(_scaleFactor), nlevels(_nlevels),
     iniThFAST(_iniThFAST), minThFAST(_minThFAST)
 {
+    nIniFeatures=nfeatures;
+    nLastFeatures=nfeatures;
+
     mvScaleFactor.resize(nlevels);
     mvLevelSigma2.resize(nlevels);
     mvScaleFactor[0]=1.0f;
@@ -433,17 +436,7 @@ ORBextractor::ORBextractor(int _nfeatures, float _scaleFactor, int _nlevels,
     mvImagePyramid.resize(nlevels);
 
     mnFeaturesPerLevel.resize(nlevels);
-    float factor = 1.0f / scaleFactor;
-    float nDesiredFeaturesPerScale = nfeatures*(1 - factor)/(1 - (float)pow((double)factor, (double)nlevels));
-
-    int sumFeatures = 0;
-    for( int level = 0; level < nlevels-1; level++ )
-    {
-        mnFeaturesPerLevel[level] = cvRound(nDesiredFeaturesPerScale);
-        sumFeatures += mnFeaturesPerLevel[level];
-        nDesiredFeaturesPerScale *= factor;
-    }
-    mnFeaturesPerLevel[nlevels-1] = std::max(nfeatures - sumFeatures, 0);
+    ComputeNFeaturesPerLevel();
 
     const int npoints = 512;
     const Point* pattern0 = (const Point*)bit_pattern_31_;
@@ -852,7 +845,22 @@ void ORBextractor::ComputeKeyPointsOctTree(vector<vector<KeyPoint> >& allKeypoin
         computeOrientation(mvImagePyramid[level], allKeypoints[level], umax);
 }
 
-void ORBextractor::ComputeKeyPointsOld(std::vector<std::vector<KeyPoint> > &allKeypoints)
+void ORBextractor::ComputeNFeaturesPerLevel()
+{
+    float factor = 1.0f / scaleFactor;
+    float nDesiredFeaturesPerScale = nfeatures*(1 - factor)/(1 - (float)pow((double)factor, (double)nlevels));
+
+    int sumFeatures = 0;
+    for( int level = 0; level < nlevels-1; level++ )
+    {
+        mnFeaturesPerLevel[level] = cvRound(nDesiredFeaturesPerScale);
+        sumFeatures += mnFeaturesPerLevel[level];
+        nDesiredFeaturesPerScale *= factor;
+    }
+    mnFeaturesPerLevel[nlevels-1] = std::max(nfeatures - sumFeatures, 0);
+}
+
+    void ORBextractor::ComputeKeyPointsOld(std::vector<std::vector<KeyPoint> > &allKeypoints)
 {
     allKeypoints.resize(nlevels);
 
@@ -1052,6 +1060,10 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
     // Pre-compute the scale pyramid
     ComputePyramid(image);
 
+    // Recompute number of features to be extracted on each level
+    if(adaptiveNFeatures)
+        ComputeNFeaturesPerLevel();
+
     vector < vector<KeyPoint> > allKeypoints;
     ComputeKeyPointsOctTree(allKeypoints);
     //ComputeKeyPointsOld(allKeypoints);
@@ -1059,8 +1071,10 @@ void ORBextractor::operator()( InputArray _image, InputArray _mask, vector<KeyPo
     Mat descriptors;
 
     int nkeypoints = 0;
+
     for (int level = 0; level < nlevels; ++level)
         nkeypoints += (int)allKeypoints[level].size();
+
     if( nkeypoints == 0 )
         _descriptors.release();
     else
@@ -1129,6 +1143,43 @@ void ORBextractor::ComputePyramid(cv::Mat image)
         }
     }
 
+}
+
+void ORBextractor::SetNFeatures(int _nfeatures)
+{
+    nLastFeatures=nfeatures;
+
+    if(!adaptiveNFeatures)
+        return;
+
+    if(_nfeatures>100 && _nfeatures<2000)
+    {
+        nfeatures = _nfeatures;
+        cout << "nfeatures set to " << _nfeatures << endl;
+    }
+    else
+    {
+        if(_nfeatures<1000)
+            nfeatures = 100;
+        else if(_nfeatures>1000)
+            nfeatures=2000;
+        cout << "Requested feature count out of bounds, setting to boundary: " << nfeatures << endl;
+    }
+}
+
+void ORBextractor::ResetNFeatures()
+{
+    nfeatures=nIniFeatures;
+    nLastFeatures=nIniFeatures;
+}
+
+int & ORBextractor::GetNfeatures() const {
+    return (int&)nfeatures;
+}
+
+int & ORBextractor::GetNLastFeatures() const
+{
+    return (int&)nLastFeatures;
 }
 
 } //namespace ORB_SLAM

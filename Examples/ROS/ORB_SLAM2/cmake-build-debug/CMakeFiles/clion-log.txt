@@ -1,0 +1,20 @@
+/home/grafue/clion-2016.2.3/bin/cmake/bin/cmake -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - Unix Makefiles" /home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2
+[rosbuild] Building package ORB_SLAM2
+[rosbuild] Error from directory check: /opt/ros/indigo/share/ros/core/rosbuild/bin/check_same_directories.py  /home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2
+1
+Traceback (most recent call last):
+  File "/opt/ros/indigo/share/ros/core/rosbuild/bin/check_same_directories.py", line 46, in <module>
+    raise Exception
+Exception
+CMake Error at /opt/ros/indigo/share/ros/core/rosbuild/private.cmake:102 (message):
+  [rosbuild] rospack found package "ORB_SLAM2" at "", but the current
+  directory is "/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2".
+  You should double-check your ROS_PACKAGE_PATH to ensure that packages are
+  found in the correct precedence order.
+Call Stack (most recent call first):
+  /opt/ros/indigo/share/ros/core/rosbuild/public.cmake:177 (_rosbuild_check_package_location)
+  CMakeLists.txt:4 (rosbuild_init)
+
+
+-- Configuring incomplete, errors occurred!
+See also "/home/grafue/catkin_ws/src/ORB_SLAM2/Examples/ROS/ORB_SLAM2/cmake-build-debug/CMakeFiles/CMakeOutput.log".
