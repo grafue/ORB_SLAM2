@@ -363,7 +363,7 @@ int Optimizer::PoseOptimization(Frame *pFrame, cv::Mat *priorRefPose)
         optimizer.addEdge(refEdge);
     } else
     {
-        cout << "Reference edge not set in pose optimization" << endl;
+        // cout << "Reference edge not set in pose optimization" << endl;
     }
 
     // Set MapPoint vertices
