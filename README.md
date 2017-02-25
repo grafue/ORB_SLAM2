@@ -236,6 +236,7 @@ This mode can be used when you have a good map of your working area. In this mod
 
 #10. Running RSLAM 
 Commands to run the RSLAM implemented by Grafue
+
 1. Clone Repository
 2. Replace src folder link in Examples/ROS/orb_slam using 
 $ ln -s target link-name
